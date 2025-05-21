@@ -12,3 +12,4 @@ extern "C"
 #endif
 
 void InitGUI();
+bool IsGUIReady();
