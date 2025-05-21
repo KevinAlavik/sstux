@@ -1,8 +1,12 @@
 #include <cstdio>
+#include <thread>
+#include <chrono>
 #include <hooks.hpp>
+#include <gui.hpp>
 
 __attribute__((constructor)) static void Init()
 {
-    fprintf(stderr, "[SuperSuperTux] Hello from SSTux!\n");
+    fprintf(stderr, "[SSTux] Hello from SSTux!\n");
     InstallSDLHooks();
+    std::thread(InitGUI).detach();
 }

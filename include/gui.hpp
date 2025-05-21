@@ -6,8 +6,9 @@
 extern "C"
 {
 #endif
-    void InstallSDLHooks(void);
-    SDL_Window *GetStoredWindow(void);
+    void DrawGUI(SDL_Window *win);
 #ifdef __cplusplus
 }
 #endif
+
+void InitGUI();
