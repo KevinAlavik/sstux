@@ -45,7 +45,7 @@ void InitGUI()
         SDL_GLContext context = SDL_GL_GetCurrentContext();
         if (!context)
         {
-            fprintf(stderr, "[SSTux] No active OpenGL context. we are cooked bro.\n");
+            /* just shut up and hope something else fixes it */
             return;
         }
 
