@@ -7,6 +7,8 @@
 #include <cstdlib>
 #include <SDL2/SDL.h>
 #include <gui/elements.hpp>
+#include <fstream>
+#include <sstream>
 
 namespace SSTux
 {
@@ -29,6 +31,49 @@ namespace SSTux
             return "Unknown";
         }
 
+        uintptr_t GetBaseAddress()
+        {
+            uintptr_t baseAddress = 0;
+            std::ifstream maps("/proc/self/maps");
+            if (!maps)
+            {
+                Log("Failed to open /proc/self/maps");
+                return 0;
+            }
+
+            std::string line;
+            std::string processName = SSTux::GetProcessName();
+            std::string addressRange, perms, offset, dev, inode, pathname;
+            while (std::getline(maps, line))
+            {
+                std::istringstream iss(line);
+
+                iss >> addressRange >> perms >> offset >> dev >> inode;
+                std::getline(iss, pathname);
+
+                size_t start = pathname.find_first_not_of(' ');
+                if (start != std::string::npos)
+                    pathname = pathname.substr(start);
+                else
+                    pathname.clear();
+
+                if (!pathname.empty() && pathname.find("supertux") != std::string::npos && perms.find('x') != std::string::npos)
+                {
+                    size_t dash = addressRange.find('-');
+                    if (dash != std::string::npos)
+                    {
+                        std::string startAddrStr = addressRange.substr(0, dash);
+                        baseAddress = std::stoull(startAddrStr, nullptr, 16);
+                        break;
+                    }
+                }
+            }
+
+            if (baseAddress == 0)
+                Log("Could not find base address of supertux executable");
+
+            return baseAddress;
+        }
     }
 
     __attribute__((constructor)) static void Initialize()
@@ -44,9 +89,13 @@ namespace SSTux
             std::exit(EXIT_FAILURE);
         }
 
+        uintptr_t baseAddr = GetBaseAddress();
+        std::ostringstream oss;
+        oss << "SuperTux2 base address: 0x" << std::hex << baseAddr;
+        Log(oss.str());
+
         try
         {
-
             Hooks::InstallSDLHooks();
             Log("Hooks installed successfully");
         }
