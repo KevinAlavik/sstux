@@ -6,14 +6,12 @@
 typedef SDL_Window *(*SDL_CreateWindow_t)(const char *, int, int, int, int, Uint32);
 typedef void (*SDL_SetWindowTitle_t)(SDL_Window *, const char *);
 typedef void (*SDL_GL_SwapWindow_t)(SDL_Window *);
-typedef int (*SDL_PollEvent_t)(SDL_Event *);
 typedef SDL_GLContext (*SDL_GL_CreateContext_t)(SDL_Window *);
 
 /* SDL Real Handlers */
 static SDL_CreateWindow_t real_SDL_CreateWindow = NULL;
 static SDL_SetWindowTitle_t real_SDL_SetWindowTitle = NULL;
 static SDL_GL_SwapWindow_t real_SDL_GL_SwapWindow = NULL;
-static SDL_PollEvent_t real_SDL_PollEvent = NULL;
 static SDL_GL_CreateContext_t real_SDL_GL_CreateContext = NULL;
 
 /* Global SDL variables used by SSTux */
@@ -27,10 +25,9 @@ InstallSDLHooks(void)
     real_SDL_CreateWindow = (SDL_CreateWindow_t)dlsym(RTLD_NEXT, "SDL_CreateWindow");
     real_SDL_SetWindowTitle = (SDL_SetWindowTitle_t)dlsym(RTLD_NEXT, "SDL_SetWindowTitle");
     real_SDL_GL_SwapWindow = (SDL_GL_SwapWindow_t)dlsym(RTLD_NEXT, "SDL_GL_SwapWindow");
-    real_SDL_PollEvent = (SDL_PollEvent_t)dlsym(RTLD_NEXT, "SDL_PollEvent");
     real_SDL_GL_CreateContext = (SDL_GL_CreateContext_t)dlsym(RTLD_NEXT, "SDL_GL_CreateContext");
 
-    if (!real_SDL_CreateWindow || !real_SDL_SetWindowTitle || !real_SDL_GL_SwapWindow || !real_SDL_PollEvent || !real_SDL_GL_CreateContext)
+    if (!real_SDL_CreateWindow || !real_SDL_SetWindowTitle || !real_SDL_GL_SwapWindow || !real_SDL_GL_CreateContext)
         fprintf(stderr, "[SSTux] Error: Failed to resolve one or more SDL functions\n");
 }
 
@@ -62,23 +59,6 @@ extern "C" void SDL_SetWindowTitle(SDL_Window *window, const char *title)
     fprintf(stderr, "[SSTux] Hooked SDL_SetWindowTitle, patched window title, updated window: %p\n", g_Window);
 
     real_SDL_SetWindowTitle(window, modifiedTitle);
-}
-
-extern "C" void SDL_GL_SwapWindow(SDL_Window *window)
-{
-    if (!real_SDL_GL_SwapWindow)
-        return;
-
-    real_SDL_GL_SwapWindow(window);
-}
-
-extern "C" int SDL_PollEvent(SDL_Event *event)
-{
-    if (!real_SDL_PollEvent)
-        return 0;
-
-    int ret = real_SDL_PollEvent(event);
-    return ret;
 }
 
 extern "C" SDL_GLContext SDL_GL_CreateContext(SDL_Window *window)
