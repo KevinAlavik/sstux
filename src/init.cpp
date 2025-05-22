@@ -56,6 +56,11 @@ namespace SSTux
 
     __attribute__((destructor)) static void Terminate()
     {
-        Log("SuperTux v?.?.? with SSTux v" + std::string(SSTux::Config::SSTUX_VERSION) + " exited");
+        int major = SSTux::Hooks::GetSuperTuxMajor();
+        int minor = SSTux::Hooks::GetSuperTuxMinor();
+        int patch = SSTux::Hooks::GetSuperTuxPatch();
+
+        Log("SuperTux v" + std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(patch) +
+            " with SSTux v" + std::string(SSTux::Config::SSTUX_VERSION) + " exited");
     }
 }

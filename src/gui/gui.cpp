@@ -1,6 +1,7 @@
 #include <gui/gui.hpp>
 #include <gui/context.hpp>
 #include <gui/render.hpp>
+#include <gui/elements.hpp>
 
 namespace SSTux::GUI
 {
@@ -11,10 +12,11 @@ namespace SSTux::GUI
 
         BeginRender();
         RenderDebugInfo();
+        RenderShaderSettings();
         EndRender();
     }
 
-    bool Ready()
+        bool Ready()
     {
         return IsOverlayInitialized();
     }
