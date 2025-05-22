@@ -10,6 +10,7 @@
 #include <imgui.h>
 #include <imgui/imgui_impl_sdl2.h>
 #include <imgui/imgui_impl_opengl3.h>
+#include <GL/gl.h>
 
 #define HEXPTR(x) ([](auto ptr) { \
     std::ostringstream oss; \
@@ -25,12 +26,14 @@ namespace SSTux::Hooks
         using SDL_GL_SwapWindow_t = void (*)(SDL_Window *);
         using SDL_GL_CreateContext_t = SDL_GLContext (*)(SDL_Window *);
         using SDL_PollEvent_t = int (*)(SDL_Event *);
+        using SDL_RenderCopyEx_t = int (*)(SDL_Renderer *renderer, ...);
 
         SDL_CreateWindow_t real_SDL_CreateWindow = nullptr;
         SDL_SetWindowTitle_t real_SDL_SetWindowTitle = nullptr;
         SDL_GL_SwapWindow_t real_SDL_GL_SwapWindow = nullptr;
         SDL_GL_CreateContext_t real_SDL_GL_CreateContext = nullptr;
         SDL_PollEvent_t real_SDL_PollEvent = nullptr;
+        SDL_RenderCopyEx_t real_SDL_RenderCopyEx = nullptr;
 
         SDL_Window *g_Window = nullptr;
         SDL_GLContext g_GLContext = nullptr;
@@ -51,6 +54,24 @@ namespace SSTux::Hooks
             func = reinterpret_cast<T>(handle);
         }
 
+        bool IsUsingOpenGL()
+        {
+            SDL_GLContext glContext = SDL_GL_GetCurrentContext();
+            if (!glContext)
+            {
+                Log("Error: No active OpenGL context found.");
+                return false;
+            }
+
+            const char *glVersion = reinterpret_cast<const char *>(glGetString(GL_VERSION));
+            if (glVersion)
+            {
+                Log(std::string("OpenGL version: ") + glVersion);
+            }
+
+            return true;
+        }
+
     } // anonymous namespace
 
     void InstallSDLHooks()
@@ -62,6 +83,7 @@ namespace SSTux::Hooks
             ResolveSymbol(real_SDL_GL_SwapWindow, "SDL_GL_SwapWindow");
             ResolveSymbol(real_SDL_GL_CreateContext, "SDL_GL_CreateContext");
             ResolveSymbol(real_SDL_PollEvent, "SDL_PollEvent");
+            ResolveSymbol(real_SDL_RenderCopyEx, "SDL_RenderCopyEx");
             Log("SDL hooks installed successfully");
         }
         catch (const std::exception &e)
@@ -149,6 +171,14 @@ namespace SSTux::Hooks
         }
 
         return result;
+    }
+
+    extern "C" int SDL_RenderCopyEx(SDL_Renderer *renderer, ...)
+    {
+        /* dont care about real handler */
+        Log("Error: SuperTux is not using OpenGL. Exiting.");
+        std::exit(EXIT_FAILURE);
+        return -1;
     }
 
     SDL_Window *GetStoredWindow()
