@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <string>
 #include <iostream>
+#include <config.hpp>
 
 namespace SSTux::Hooks
 {
@@ -67,7 +68,7 @@ namespace SSTux::Hooks
             return nullptr;
         }
 
-        std::string modifiedTitle = std::string(title) + " | SSTux";
+        std::string modifiedTitle = std::string(title) + SSTux::Config::WINDOW_TITLE_PREFIX;
         SDL_Window *window = real_SDL_CreateWindow(modifiedTitle.c_str(), x, y, w, h, flags);
         g_Window = window;
 
@@ -84,7 +85,7 @@ namespace SSTux::Hooks
             return;
         }
 
-        std::string modifiedTitle = std::string(title) + " | SSTux";
+        std::string modifiedTitle = std::string(title) + SSTux::Config::WINDOW_TITLE_PREFIX;
         real_SDL_SetWindowTitle(window, modifiedTitle.c_str());
         g_Window = window;
 

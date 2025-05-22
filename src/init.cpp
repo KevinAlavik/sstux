@@ -2,6 +2,7 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include <config.hpp>
 
 namespace SSTux
 {
@@ -16,7 +17,7 @@ namespace SSTux
 
     __attribute__((constructor)) static void Initialize()
     {
-        Log("Initializing SSTux cheat for SuperTux2");
+        Log("Initializing SSTux mod for supertux2, loading ? mods");
 
         try
         {
@@ -31,7 +32,6 @@ namespace SSTux
 
     __attribute__((destructor)) static void Terminate()
     {
-        Log("SuperTux v?.?.? with SSTux v1.0.0 exited");
+        Log("SuperTux v?.?.? with SSTux v" + std::string(SSTux::Config::SSTUX_VERSION) + " exited");
     }
-
 } // namespace SSTux
