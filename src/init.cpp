@@ -1,5 +1,6 @@
 #include <hooks.hpp>
 #include <config.hpp>
+#include <dlfcn.h>
 #include <iostream>
 #include <unistd.h>
 #include <limits.h>
@@ -74,6 +75,28 @@ namespace SSTux
 
             return baseAddress;
         }
+
+        void *GetSymbolAddress(const char *symbol)
+        {
+            void *handle = dlopen(nullptr, RTLD_NOW);
+            if (!handle)
+            {
+                Log(std::string("dlopen failed: ") + dlerror());
+                return nullptr;
+            }
+
+            dlerror();
+            void *addr = dlsym(handle, symbol);
+            char *error = dlerror();
+            if (error != nullptr)
+            {
+                Log(std::string("dlsym error: ") + error);
+                dlclose(handle);
+                return nullptr;
+            }
+            dlclose(handle);
+            return addr;
+        }
     }
 
     __attribute__((constructor)) static void Initialize()
@@ -93,6 +116,16 @@ namespace SSTux
         std::ostringstream oss;
         oss << "SuperTux2 base address: 0x" << std::hex << baseAddr;
         Log(oss.str());
+
+        void *launchGameAddr = GetSymbolAddress("_ZN4Main11launch_gameERK20CommandLineArguments");
+        if (launchGameAddr)
+        {
+            Log("Main::launch_game() symbol address: " + HEXPTR((uintptr_t)launchGameAddr));
+        }
+        else
+        {
+            Log("Main::launch_game() symbol not found.");
+        }
 
         try
         {

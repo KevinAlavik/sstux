@@ -14,11 +14,6 @@
 #include <regex>
 #include <sstux.hpp>
 
-#define HEXPTR(x) ([](auto ptr) { \
-    std::ostringstream oss; \
-    oss << "0x" << std::hex << reinterpret_cast<uintptr_t>(ptr); \
-    return oss.str(); }(x))
-
 namespace SSTux::Hooks
 {
     namespace
