@@ -11,6 +11,7 @@
 #include <imgui/imgui_impl_sdl2.h>
 #include <imgui/imgui_impl_opengl3.h>
 #include <GL/gl.h>
+#include <regex>
 
 #define HEXPTR(x) ([](auto ptr) { \
     std::ostringstream oss; \
@@ -38,6 +39,11 @@ namespace SSTux::Hooks
         SDL_Window *g_Window = nullptr;
         SDL_GLContext g_GLContext = nullptr;
 
+        static int supertux_version_major = -1;
+        static int supertux_version_minor = -1;
+        static int supertux_version_patch = -1;
+        static bool version_parsed = false;
+
         void Log(const std::string &message)
         {
             std::cerr << "[SSTux] " << message << std::endl;
@@ -54,22 +60,31 @@ namespace SSTux::Hooks
             func = reinterpret_cast<T>(handle);
         }
 
-        bool IsUsingOpenGL()
+        void ParseVersion(const char *title)
         {
-            SDL_GLContext glContext = SDL_GL_GetCurrentContext();
-            if (!glContext)
-            {
-                Log("Error: No active OpenGL context found.");
-                return false;
-            }
+            if (version_parsed || !title)
+                return;
 
-            const char *glVersion = reinterpret_cast<const char *>(glGetString(GL_VERSION));
-            if (glVersion)
-            {
-                Log(std::string("OpenGL version: ") + glVersion);
-            }
+            std::string titleStr(title);
+            std::smatch match;
+            std::regex versionRegex(R"(SuperTux v(\d+)\.(\d+)\.(\d+))");
 
-            return true;
+            if (std::regex_search(titleStr, match, versionRegex) && match.size() == 4)
+            {
+                supertux_version_major = std::stoi(match[1]);
+                supertux_version_minor = std::stoi(match[2]);
+                supertux_version_patch = std::stoi(match[3]);
+                version_parsed = true;
+
+                Log("Parsed SuperTux version: " +
+                    std::to_string(supertux_version_major) + "." +
+                    std::to_string(supertux_version_minor) + "." +
+                    std::to_string(supertux_version_patch));
+            }
+            else
+            {
+                Log("Warning: Could not parse SuperTux version from title.");
+            }
         }
 
     } // anonymous namespace
@@ -117,6 +132,7 @@ namespace SSTux::Hooks
             return;
         }
 
+        ParseVersion(title);
         std::string modifiedTitle = std::string(title) + SSTux::Config::WINDOW_TITLE_PREFIX;
         real_SDL_SetWindowTitle(window, modifiedTitle.c_str());
         g_Window = window;
@@ -175,6 +191,7 @@ namespace SSTux::Hooks
 
     extern "C" int SDL_RenderCopyEx(SDL_Renderer *renderer, ...)
     {
+        (void)renderer;
         /* dont care about real handler */
         Log("Error: SuperTux is not using OpenGL. Exiting.");
         std::exit(EXIT_FAILURE);
@@ -190,5 +207,10 @@ namespace SSTux::Hooks
     {
         return g_GLContext;
     }
+
+    int GetSuperTuxMajor() { return supertux_version_major; }
+    int GetSuperTuxMinor() { return supertux_version_minor; }
+    int GetSuperTuxPatch() { return supertux_version_patch; }
+    bool HasValidSuperTuxVersion() { return version_parsed; }
 
 } // namespace SSTux::Hooks
