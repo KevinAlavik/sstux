@@ -3,13 +3,19 @@
 #include <stdexcept>
 #include <string>
 #include <iostream>
+#include <sstream> // for HEXPTR macro
 #include <config.hpp>
+
+#define HEXPTR(x) ([](auto ptr) { \
+    std::ostringstream oss; \
+    oss << "0x" << std::hex << reinterpret_cast<uintptr_t>(ptr); \
+    return oss.str(); }(x))
 
 namespace SSTux::Hooks
 {
     namespace
     {
-        // SDL functions
+        // SDL function typedefs
         using SDL_CreateWindow_t = SDL_Window *(*)(const char *, int, int, int, int, Uint32);
         using SDL_SetWindowTitle_t = void (*)(SDL_Window *, const char *);
         using SDL_GL_SwapWindow_t = void (*)(SDL_Window *);
@@ -72,7 +78,7 @@ namespace SSTux::Hooks
         SDL_Window *window = real_SDL_CreateWindow(modifiedTitle.c_str(), x, y, w, h, flags);
         g_Window = window;
 
-        Log("Hooked SDL_CreateWindow, patched title to '" + modifiedTitle + "', window: " + std::to_string(reinterpret_cast<uintptr_t>(window)));
+        Log("Hooked SDL_CreateWindow, patched title to '" + modifiedTitle + "', window: " + HEXPTR(window));
         return window;
     }
 
@@ -89,7 +95,7 @@ namespace SSTux::Hooks
         real_SDL_SetWindowTitle(window, modifiedTitle.c_str());
         g_Window = window;
 
-        Log("Hooked SDL_SetWindowTitle, patched title to '" + modifiedTitle + "', window: " + std::to_string(reinterpret_cast<uintptr_t>(window)));
+        Log("Hooked SDL_SetWindowTitle, patched title to '" + modifiedTitle + "', window: " + HEXPTR(window));
     }
 
     // Hook for SDL_GL_CreateContext
@@ -104,7 +110,7 @@ namespace SSTux::Hooks
         SDL_GLContext context = real_SDL_GL_CreateContext(window);
         g_GLContext = context;
 
-        Log("Hooked SDL_GL_CreateContext, created context: " + std::to_string(reinterpret_cast<uintptr_t>(context)) + " for window: " + std::to_string(reinterpret_cast<uintptr_t>(window)));
+        Log("Hooked SDL_GL_CreateContext, created context: " + HEXPTR(context) + " for window: " + HEXPTR(window));
         return context;
     }
 

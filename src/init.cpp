@@ -6,7 +6,6 @@
 
 namespace SSTux
 {
-
     namespace
     {
         void Log(const std::string &message)
@@ -34,4 +33,4 @@ namespace SSTux
     {
         Log("SuperTux v?.?.? with SSTux v" + std::string(SSTux::Config::SSTUX_VERSION) + " exited");
     }
-} // namespace SSTux
+}
