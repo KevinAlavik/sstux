@@ -2,13 +2,9 @@
 
 #include <SDL2/SDL.h>
 
-#ifdef __cplusplus
-extern "C"
+namespace SSTux::Hooks
 {
-#endif
-    void InstallSDLHooks(void);
-    SDL_Window *GetStoredWindow(void);
-    SDL_GLContext GetStoredGLContext(void);
-#ifdef __cplusplus
-}
-#endif
+    void InstallSDLHooks();
+    SDL_Window *GetStoredWindow();
+    SDL_GLContext GetStoredGLContext();
+} // namespace SSTux::Hooks

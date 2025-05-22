@@ -1,12 +1,36 @@
-#include <cstdio>
+#include <hooks.hpp>
+#include <iostream>
 #include <thread>
 #include <chrono>
-#include <hooks.hpp>
-#include <gui.hpp>
+#include <config.hpp>
 
-__attribute__((constructor)) static void Init()
+namespace SSTux
 {
-    fprintf(stderr, "[SSTux] Hello from SSTux!\n");
-    InstallSDLHooks();
-    std::thread(InitGUI).detach();
+    namespace
+    {
+        void Log(const std::string &message)
+        {
+            std::cerr << "[SSTux] " << message << std::endl;
+        }
+    }
+
+    __attribute__((constructor)) static void Initialize()
+    {
+        Log("Initializing SSTux mod for supertux2, loading no mods");
+
+        try
+        {
+            Hooks::InstallSDLHooks();
+            Log("Hooks installed successfully");
+        }
+        catch (const std::exception &e)
+        {
+            Log("Initialization failed: " + std::string(e.what()));
+        }
+    }
+
+    __attribute__((destructor)) static void Terminate()
+    {
+        Log("SuperTux v?.?.? with SSTux v" + std::string(SSTux::Config::SSTUX_VERSION) + " exited");
+    }
 }
