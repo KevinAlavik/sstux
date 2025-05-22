@@ -12,6 +12,7 @@
 #include <imgui/imgui_impl_opengl3.h>
 #include <GL/gl.h>
 #include <regex>
+#include <sstux.hpp>
 
 #define HEXPTR(x) ([](auto ptr) { \
     std::ostringstream oss; \
@@ -162,6 +163,8 @@ namespace SSTux::Hooks
             Log("SDL_GL_SwapWindow hook called but real function not resolved");
             return;
         }
+
+        Update();
 
         if (window == g_Window)
         {
