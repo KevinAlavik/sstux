@@ -1,84 +1,121 @@
-#include <stdio.h>
+#include <hooks.hpp>
 #include <dlfcn.h>
-#include <SDL2/SDL.h>
+#include <stdexcept>
+#include <string>
+#include <iostream>
 
-/* SDL Hooks */
-typedef SDL_Window *(*SDL_CreateWindow_t)(const char *, int, int, int, int, Uint32);
-typedef void (*SDL_SetWindowTitle_t)(SDL_Window *, const char *);
-typedef void (*SDL_GL_SwapWindow_t)(SDL_Window *);
-typedef SDL_GLContext (*SDL_GL_CreateContext_t)(SDL_Window *);
-
-/* SDL Real Handlers */
-static SDL_CreateWindow_t real_SDL_CreateWindow = NULL;
-static SDL_SetWindowTitle_t real_SDL_SetWindowTitle = NULL;
-static SDL_GL_SwapWindow_t real_SDL_GL_SwapWindow = NULL;
-static SDL_GL_CreateContext_t real_SDL_GL_CreateContext = NULL;
-
-/* Global SDL variables used by SSTux */
-static SDL_Window *g_Window = NULL;
-static SDL_GLContext g_GLContext = NULL;
-
-/* Init */
-extern "C" void
-InstallSDLHooks(void)
+namespace SSTux::Hooks
 {
-    real_SDL_CreateWindow = (SDL_CreateWindow_t)dlsym(RTLD_NEXT, "SDL_CreateWindow");
-    real_SDL_SetWindowTitle = (SDL_SetWindowTitle_t)dlsym(RTLD_NEXT, "SDL_SetWindowTitle");
-    real_SDL_GL_SwapWindow = (SDL_GL_SwapWindow_t)dlsym(RTLD_NEXT, "SDL_GL_SwapWindow");
-    real_SDL_GL_CreateContext = (SDL_GL_CreateContext_t)dlsym(RTLD_NEXT, "SDL_GL_CreateContext");
+    namespace
+    {
+        // SDL functions
+        using SDL_CreateWindow_t = SDL_Window *(*)(const char *, int, int, int, int, Uint32);
+        using SDL_SetWindowTitle_t = void (*)(SDL_Window *, const char *);
+        using SDL_GL_SwapWindow_t = void (*)(SDL_Window *);
+        using SDL_GL_CreateContext_t = SDL_GLContext (*)(SDL_Window *);
 
-    if (!real_SDL_CreateWindow || !real_SDL_SetWindowTitle || !real_SDL_GL_SwapWindow || !real_SDL_GL_CreateContext)
-        fprintf(stderr, "[SSTux] Error: Failed to resolve one or more SDL functions\n");
-}
+        // Real SDL function pointers
+        SDL_CreateWindow_t real_SDL_CreateWindow = nullptr;
+        SDL_SetWindowTitle_t real_SDL_SetWindowTitle = nullptr;
+        SDL_GL_SwapWindow_t real_SDL_GL_SwapWindow = nullptr;
+        SDL_GL_CreateContext_t real_SDL_GL_CreateContext = nullptr;
 
-/* Hooks */
-extern "C" SDL_Window *SDL_CreateWindow(const char *title, int x, int y, int w, int h, Uint32 flags)
-{
-    if (!real_SDL_CreateWindow)
-        return NULL;
+        // Global SDL state
+        SDL_Window *g_Window = nullptr;
+        SDL_GLContext g_GLContext = nullptr;
 
-    char modifiedTitle[512];
-    snprintf(modifiedTitle, sizeof(modifiedTitle), "%s%s", title, " | SSTux ");
-    SDL_Window *win = real_SDL_CreateWindow(modifiedTitle, x, y, w, h, flags);
+        void Log(const std::string &message)
+        {
+            std::cerr << "[SSTux] " << message << std::endl;
+        }
 
-    g_Window = win;
-    fprintf(stderr, "[SSTux] Hooked SDL_CreateWindow, patched window title, stored window: %p\n", g_Window);
+        template <typename T>
+        void ResolveSymbol(T &func, const char *symbol)
+        {
+            void *handle = dlsym(RTLD_NEXT, symbol);
+            if (!handle)
+            {
+                throw std::runtime_error("Failed to resolve symbol: " + std::string(symbol));
+            }
+            func = reinterpret_cast<T>(handle);
+        }
+    }
 
-    return win;
-}
+    void InstallSDLHooks()
+    {
+        try
+        {
+            ResolveSymbol(real_SDL_CreateWindow, "SDL_CreateWindow");
+            ResolveSymbol(real_SDL_SetWindowTitle, "SDL_SetWindowTitle");
+            ResolveSymbol(real_SDL_GL_SwapWindow, "SDL_GL_SwapWindow");
+            ResolveSymbol(real_SDL_GL_CreateContext, "SDL_GL_CreateContext");
+            Log("SDL hooks installed successfully");
+        }
+        catch (const std::exception &e)
+        {
+            Log("Failed to install SDL hooks: " + std::string(e.what()));
+            throw;
+        }
+    }
 
-extern "C" void SDL_SetWindowTitle(SDL_Window *window, const char *title)
-{
-    if (!real_SDL_SetWindowTitle)
-        return;
+    // Hook for SDL_CreateWindow
+    extern "C" SDL_Window *SDL_CreateWindow(const char *title, int x, int y, int w, int h, Uint32 flags)
+    {
+        if (!real_SDL_CreateWindow)
+        {
+            Log("SDL_CreateWindow hook called but real function not resolved");
+            return nullptr;
+        }
 
-    char modifiedTitle[512];
-    snprintf(modifiedTitle, sizeof(modifiedTitle), "%s%s", title, " | SSTux ");
+        std::string modifiedTitle = std::string(title) + " | SSTux";
+        SDL_Window *window = real_SDL_CreateWindow(modifiedTitle.c_str(), x, y, w, h, flags);
+        g_Window = window;
 
-    g_Window = window;
-    fprintf(stderr, "[SSTux] Hooked SDL_SetWindowTitle, patched window title, updated window: %p\n", g_Window);
+        Log("Hooked SDL_CreateWindow, patched title to '" + modifiedTitle + "', window: " + std::to_string(reinterpret_cast<uintptr_t>(window)));
+        return window;
+    }
 
-    real_SDL_SetWindowTitle(window, modifiedTitle);
-}
+    // Hook for SDL_SetWindowTitle
+    extern "C" void SDL_SetWindowTitle(SDL_Window *window, const char *title)
+    {
+        if (!real_SDL_SetWindowTitle)
+        {
+            Log("SDL_SetWindowTitle hook called but real function not resolved");
+            return;
+        }
 
-extern "C" SDL_GLContext SDL_GL_CreateContext(SDL_Window *window)
-{
-    if (!real_SDL_GL_CreateContext)
-        return 0;
+        std::string modifiedTitle = std::string(title) + " | SSTux";
+        real_SDL_SetWindowTitle(window, modifiedTitle.c_str());
+        g_Window = window;
 
-    SDL_GLContext c = real_SDL_GL_CreateContext(window);
-    fprintf(stderr, "[SSTux] Made OpenGL context for window: %p\n", window);
-    g_GLContext = c;
-    return c;
-}
+        Log("Hooked SDL_SetWindowTitle, patched title to '" + modifiedTitle + "', window: " + std::to_string(reinterpret_cast<uintptr_t>(window)));
+    }
 
-/* Utils */
-extern "C" SDL_Window *GetStoredWindow(void)
-{
-    return g_Window;
-}
+    // Hook for SDL_GL_CreateContext
+    extern "C" SDL_GLContext SDL_GL_CreateContext(SDL_Window *window)
+    {
+        if (!real_SDL_GL_CreateContext)
+        {
+            Log("SDL_GL_CreateContext hook called but real function not resolved");
+            return nullptr;
+        }
 
-extern "C" SDL_GLContext GetStoredGLContext(void)
-{
-    return g_GLContext;
-}
+        SDL_GLContext context = real_SDL_GL_CreateContext(window);
+        g_GLContext = context;
+
+        Log("Hooked SDL_GL_CreateContext, created context: " + std::to_string(reinterpret_cast<uintptr_t>(context)) + " for window: " + std::to_string(reinterpret_cast<uintptr_t>(window)));
+        return context;
+    }
+
+    // Utility functions to access stored SDL state
+    SDL_Window *GetStoredWindow()
+    {
+        return g_Window;
+    }
+
+    SDL_GLContext GetStoredGLContext()
+    {
+        return g_GLContext;
+    }
+
+} // namespace SSTux::Hooks
