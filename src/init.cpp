@@ -16,7 +16,7 @@ namespace SSTux
 
     __attribute__((constructor)) static void Initialize()
     {
-        Log("Initializing SSTux mod for supertux2, loading ? mods");
+        Log("Initializing SSTux mod for supertux2, loading no mods");
 
         try
         {

@@ -3,8 +3,13 @@
 #include <stdexcept>
 #include <string>
 #include <iostream>
-#include <sstream> // for HEXPTR macro
+#include <sstream>
 #include <config.hpp>
+#include <SDL2/SDL.h>
+#include <gui/gui.hpp>
+#include <imgui.h>
+#include <imgui/imgui_impl_sdl2.h>
+#include <imgui/imgui_impl_opengl3.h>
 
 #define HEXPTR(x) ([](auto ptr) { \
     std::ostringstream oss; \
@@ -15,19 +20,18 @@ namespace SSTux::Hooks
 {
     namespace
     {
-        // SDL function typedefs
         using SDL_CreateWindow_t = SDL_Window *(*)(const char *, int, int, int, int, Uint32);
         using SDL_SetWindowTitle_t = void (*)(SDL_Window *, const char *);
         using SDL_GL_SwapWindow_t = void (*)(SDL_Window *);
         using SDL_GL_CreateContext_t = SDL_GLContext (*)(SDL_Window *);
+        using SDL_PollEvent_t = int (*)(SDL_Event *);
 
-        // Real SDL function pointers
         SDL_CreateWindow_t real_SDL_CreateWindow = nullptr;
         SDL_SetWindowTitle_t real_SDL_SetWindowTitle = nullptr;
         SDL_GL_SwapWindow_t real_SDL_GL_SwapWindow = nullptr;
         SDL_GL_CreateContext_t real_SDL_GL_CreateContext = nullptr;
+        SDL_PollEvent_t real_SDL_PollEvent = nullptr;
 
-        // Global SDL state
         SDL_Window *g_Window = nullptr;
         SDL_GLContext g_GLContext = nullptr;
 
@@ -46,7 +50,8 @@ namespace SSTux::Hooks
             }
             func = reinterpret_cast<T>(handle);
         }
-    }
+
+    } // anonymous namespace
 
     void InstallSDLHooks()
     {
@@ -56,6 +61,7 @@ namespace SSTux::Hooks
             ResolveSymbol(real_SDL_SetWindowTitle, "SDL_SetWindowTitle");
             ResolveSymbol(real_SDL_GL_SwapWindow, "SDL_GL_SwapWindow");
             ResolveSymbol(real_SDL_GL_CreateContext, "SDL_GL_CreateContext");
+            ResolveSymbol(real_SDL_PollEvent, "SDL_PollEvent");
             Log("SDL hooks installed successfully");
         }
         catch (const std::exception &e)
@@ -65,7 +71,6 @@ namespace SSTux::Hooks
         }
     }
 
-    // Hook for SDL_CreateWindow
     extern "C" SDL_Window *SDL_CreateWindow(const char *title, int x, int y, int w, int h, Uint32 flags)
     {
         if (!real_SDL_CreateWindow)
@@ -82,7 +87,6 @@ namespace SSTux::Hooks
         return window;
     }
 
-    // Hook for SDL_SetWindowTitle
     extern "C" void SDL_SetWindowTitle(SDL_Window *window, const char *title)
     {
         if (!real_SDL_SetWindowTitle)
@@ -98,7 +102,6 @@ namespace SSTux::Hooks
         Log("Hooked SDL_SetWindowTitle, patched title to '" + modifiedTitle + "', window: " + HEXPTR(window));
     }
 
-    // Hook for SDL_GL_CreateContext
     extern "C" SDL_GLContext SDL_GL_CreateContext(SDL_Window *window)
     {
         if (!real_SDL_GL_CreateContext)
@@ -114,7 +117,40 @@ namespace SSTux::Hooks
         return context;
     }
 
-    // Utility functions to access stored SDL state
+    extern "C" void SDL_GL_SwapWindow(SDL_Window *window)
+    {
+        if (!real_SDL_GL_SwapWindow)
+        {
+            Log("SDL_GL_SwapWindow hook called but real function not resolved");
+            return;
+        }
+
+        if (window == g_Window)
+        {
+            SSTux::GUI::DrawOverlay();
+        }
+
+        real_SDL_GL_SwapWindow(window);
+    }
+
+    extern "C" int SDL_PollEvent(SDL_Event *event)
+    {
+        if (!real_SDL_PollEvent)
+        {
+            Log("SDL_PollEvent hook called but real function not resolved");
+            return 0;
+        }
+
+        int result = real_SDL_PollEvent(event);
+
+        if (result != 0 && event && SSTux::GUI::Ready())
+        {
+            ImGui_ImplSDL2_ProcessEvent(event);
+        }
+
+        return result;
+    }
+
     SDL_Window *GetStoredWindow()
     {
         return g_Window;

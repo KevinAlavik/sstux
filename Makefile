@@ -1,7 +1,7 @@
 CXX = g++
 CC  = gcc
 
-CXXFLAGS = -Wall -Wextra -g -fPIC -std=c++17 -Isrc -Iinclude
+CXXFLAGS = -Wall -Wextra -g -fPIC -std=c++17 -Isrc -Iinclude -Iinclude/imgui
 CFLAGS   = -Wall -Wextra -g -fPIC -Isrc -Iinclude
 LDFLAGS  = -shared
 
