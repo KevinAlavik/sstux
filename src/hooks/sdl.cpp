@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <dlfcn.h>
 #include <SDL2/SDL.h>
-#include <gui.hpp>
-#include <imgui/imgui_impl_sdl2.h>
 
 /* SDL Hooks */
 typedef SDL_Window *(*SDL_CreateWindow_t)(const char *, int, int, int, int, Uint32);
@@ -71,11 +69,6 @@ extern "C" void SDL_GL_SwapWindow(SDL_Window *window)
     if (!real_SDL_GL_SwapWindow)
         return;
 
-    if (window == g_Window && SDL_GL_GetCurrentContext() != NULL)
-    {
-        DrawGUI(window);
-    }
-
     real_SDL_GL_SwapWindow(window);
 }
 
@@ -85,12 +78,6 @@ extern "C" int SDL_PollEvent(SDL_Event *event)
         return 0;
 
     int ret = real_SDL_PollEvent(event);
-    if (event != NULL && IsGUIReady())
-    {
-        ImGui_ImplSDL2_ProcessEvent(event);
-        fprintf(stderr, "[SSTux] ImGui processed SDL2 event...\n");
-    }
-
     return ret;
 }
 
