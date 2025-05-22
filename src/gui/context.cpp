@@ -6,6 +6,7 @@
 #include <hooks.hpp>
 #include <SDL2/SDL.h>
 #include <GL/gl.h>
+#include <gui/elements.hpp>
 
 namespace SSTux::GUI
 {
@@ -16,7 +17,6 @@ namespace SSTux::GUI
         SDL_GLContext context = nullptr;
     }
 
-    // Definition for the extern variable
     OverlaySystemInfo overlayInfo;
 
     static void Log(const std::string &message)
@@ -92,6 +92,9 @@ namespace SSTux::GUI
         {
             Log("Warning: One or more glGetString() calls returned null.");
         }
+
+        int w, h = 0;
+        SDL_GetWindowSize(Hooks::GetStoredWindow(), &w, &h);
 
         Log("Successfully built overlay");
         initialized = true;

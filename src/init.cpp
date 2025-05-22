@@ -6,6 +6,7 @@
 #include <string>
 #include <cstdlib>
 #include <SDL2/SDL.h>
+#include <gui/elements.hpp>
 
 namespace SSTux
 {
@@ -45,6 +46,7 @@ namespace SSTux
 
         try
         {
+
             Hooks::InstallSDLHooks();
             Log("Hooks installed successfully");
         }

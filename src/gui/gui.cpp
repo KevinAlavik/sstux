@@ -12,11 +12,10 @@ namespace SSTux::GUI
 
         BeginRender();
         RenderDebugInfo();
-        RenderShaderSettings();
         EndRender();
     }
 
-        bool Ready()
+    bool Ready()
     {
         return IsOverlayInitialized();
     }
