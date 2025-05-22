@@ -1,4 +1,4 @@
-#include <gui/elements/debug_info.hpp>
+#include <gui/elements.hpp>
 #include <gui/context.hpp>
 #include <config.hpp>
 #include <imgui.h>

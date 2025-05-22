@@ -1,6 +1,6 @@
 #include <gui/render.hpp>
 #include <gui/context.hpp>
-#include <gui/elements/debug_info.hpp>
+#include <gui/elements.hpp>
 
 #include <imgui/imgui_impl_sdl2.h>
 #include <imgui/imgui_impl_opengl3.h>
