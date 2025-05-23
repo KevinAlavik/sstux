@@ -4,15 +4,15 @@ namespace SSTux
 {
     namespace
     {
-        void Log(const std::string &message)
+        [[maybe_unused]] void Log(const std::string &message)
         {
-            std::cerr << "[SSTux] " << message << std::endl;
+            std::cerr << "[SSTux::Update] " << message << std::endl;
         }
 
     }
 
     void Update(void)
     {
-        /* This function gets called right before SDL_GL_SwapWindow */
+        /* This function gets called right before SDL_GL_SwapWindow, every frame */
     }
 }

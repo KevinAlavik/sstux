@@ -1,15 +1,10 @@
 #include <hooks.hpp>
-#include <dlfcn.h>
-#include <stdexcept>
-#include <string>
-#include <iostream>
-#include <sstream>
 #include <config.hpp>
-#include <SDL2/SDL.h>
 #include <gui/gui.hpp>
 #include <imgui.h>
 #include <imgui/imgui_impl_sdl2.h>
 #include <imgui/imgui_impl_opengl3.h>
+#include <SDL2/SDL.h>
 #include <GL/gl.h>
 #include <regex>
 #include <sstux.hpp>
@@ -18,13 +13,15 @@ namespace SSTux::Hooks
 {
     namespace
     {
+        // Function pointer types
         using SDL_CreateWindow_t = SDL_Window *(*)(const char *, int, int, int, int, Uint32);
         using SDL_SetWindowTitle_t = void (*)(SDL_Window *, const char *);
         using SDL_GL_SwapWindow_t = void (*)(SDL_Window *);
         using SDL_GL_CreateContext_t = SDL_GLContext (*)(SDL_Window *);
         using SDL_PollEvent_t = int (*)(SDL_Event *);
-        using SDL_RenderCopyEx_t = int (*)(SDL_Renderer *renderer, ...);
+        using SDL_RenderCopyEx_t = int (*)(SDL_Renderer *, ...);
 
+        // Real function pointers
         SDL_CreateWindow_t real_SDL_CreateWindow = nullptr;
         SDL_SetWindowTitle_t real_SDL_SetWindowTitle = nullptr;
         SDL_GL_SwapWindow_t real_SDL_GL_SwapWindow = nullptr;
@@ -32,29 +29,15 @@ namespace SSTux::Hooks
         SDL_PollEvent_t real_SDL_PollEvent = nullptr;
         SDL_RenderCopyEx_t real_SDL_RenderCopyEx = nullptr;
 
+        // Stored SDL objects
         SDL_Window *g_Window = nullptr;
         SDL_GLContext g_GLContext = nullptr;
 
-        static int supertux_version_major = -1;
-        static int supertux_version_minor = -1;
-        static int supertux_version_patch = -1;
-        static bool version_parsed = false;
-
-        void Log(const std::string &message)
-        {
-            std::cerr << "[SSTux] " << message << std::endl;
-        }
-
-        template <typename T>
-        void ResolveSymbol(T &func, const char *symbol)
-        {
-            void *handle = dlsym(RTLD_NEXT, symbol);
-            if (!handle)
-            {
-                throw std::runtime_error("Failed to resolve symbol: " + std::string(symbol));
-            }
-            func = reinterpret_cast<T>(handle);
-        }
+        // SuperTux version info
+        int supertux_version_major = -1;
+        int supertux_version_minor = -1;
+        int supertux_version_patch = -1;
+        bool version_parsed = false;
 
         void ParseVersion(const char *title)
         {
@@ -82,19 +65,19 @@ namespace SSTux::Hooks
                 Log("Warning: Could not parse SuperTux version from title.");
             }
         }
-
     } // anonymous namespace
 
     void InstallSDLHooks()
     {
         try
         {
-            ResolveSymbol(real_SDL_CreateWindow, "SDL_CreateWindow");
-            ResolveSymbol(real_SDL_SetWindowTitle, "SDL_SetWindowTitle");
-            ResolveSymbol(real_SDL_GL_SwapWindow, "SDL_GL_SwapWindow");
-            ResolveSymbol(real_SDL_GL_CreateContext, "SDL_GL_CreateContext");
-            ResolveSymbol(real_SDL_PollEvent, "SDL_PollEvent");
-            ResolveSymbol(real_SDL_RenderCopyEx, "SDL_RenderCopyEx");
+            auto &hook_manager = GetHookManager();
+            hook_manager.RegisterHook("SDL_CreateWindow", real_SDL_CreateWindow);
+            hook_manager.RegisterHook("SDL_SetWindowTitle", real_SDL_SetWindowTitle);
+            hook_manager.RegisterHook("SDL_GL_SwapWindow", real_SDL_GL_SwapWindow);
+            hook_manager.RegisterHook("SDL_GL_CreateContext", real_SDL_GL_CreateContext);
+            hook_manager.RegisterHook("SDL_PollEvent", real_SDL_PollEvent);
+            hook_manager.RegisterHook("SDL_RenderCopyEx", real_SDL_RenderCopyEx);
             Log("SDL hooks installed successfully");
         }
         catch (const std::exception &e)
@@ -190,7 +173,6 @@ namespace SSTux::Hooks
     extern "C" int SDL_RenderCopyEx(SDL_Renderer *renderer, ...)
     {
         (void)renderer;
-        /* dont care about real handler */
         Log("Error: SuperTux is not using OpenGL. Exiting.");
         std::exit(EXIT_FAILURE);
         return -1;
@@ -210,5 +192,4 @@ namespace SSTux::Hooks
     int GetSuperTuxMinor() { return supertux_version_minor; }
     int GetSuperTuxPatch() { return supertux_version_patch; }
     bool HasValidSuperTuxVersion() { return version_parsed; }
-
 } // namespace SSTux::Hooks

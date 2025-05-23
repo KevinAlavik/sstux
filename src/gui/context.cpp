@@ -21,7 +21,7 @@ namespace SSTux::GUI
 
     static void Log(const std::string &message)
     {
-        std::cerr << "[SSTux] " << message << std::endl;
+        std::cerr << "[SSTux::GUI] " << message << std::endl;
     }
 
     bool InitOverlay()

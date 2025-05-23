@@ -17,7 +17,7 @@ namespace SSTux
     {
         void Log(const std::string &message)
         {
-            std::cerr << "[SSTux] " << message << std::endl;
+            std::cerr << "[SSTux::Core] " << message << std::endl;
         }
 
         std::string GetProcessName()
