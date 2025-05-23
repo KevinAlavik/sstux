@@ -3,4 +3,5 @@
 namespace SSTux
 {
     void Update(void);
+    uintptr_t GetBaseAddress();
 }

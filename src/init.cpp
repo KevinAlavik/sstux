@@ -13,90 +13,96 @@
 
 namespace SSTux
 {
-    namespace
+    void Log(const std::string &message)
     {
-        void Log(const std::string &message)
+        std::cerr << "[SSTux::Core] " << message << std::endl;
+    }
+
+    std::string GetProcessName()
+    {
+        char path[PATH_MAX] = {0};
+        ssize_t len = readlink("/proc/self/exe", path, sizeof(path) - 1);
+        if (len != -1)
         {
-            std::cerr << "[SSTux::Core] " << message << std::endl;
+            path[len] = '\0';
+            return std::string(path);
+        }
+        return "Unknown";
+    }
+
+    uintptr_t GetBaseAddress()
+    {
+        uintptr_t baseAddress = 0;
+
+        char exePath[PATH_MAX] = {0};
+        ssize_t len = readlink("/proc/self/exe", exePath, sizeof(exePath) - 1);
+        if (len == -1)
+        {
+            Log("Failed to read /proc/self/exe");
+            return 0;
+        }
+        exePath[len] = '\0';
+        std::string exeRealPath(exePath);
+
+        std::ifstream maps("/proc/self/maps");
+        if (!maps)
+        {
+            Log("Failed to open /proc/self/maps");
+            return 0;
         }
 
-        std::string GetProcessName()
+        std::string line;
+        while (std::getline(maps, line))
         {
-            char path[PATH_MAX] = {0};
-            ssize_t len = readlink("/proc/self/exe", path, sizeof(path) - 1);
-            if (len != -1)
-            {
-                path[len] = '\0';
-                return std::string(path);
-            }
-            return "Unknown";
-        }
-
-        uintptr_t GetBaseAddress()
-        {
-            uintptr_t baseAddress = 0;
-            std::ifstream maps("/proc/self/maps");
-            if (!maps)
-            {
-                Log("Failed to open /proc/self/maps");
-                return 0;
-            }
-
-            std::string line;
-            std::string processName = SSTux::GetProcessName();
+            std::istringstream iss(line);
             std::string addressRange, perms, offset, dev, inode, pathname;
-            while (std::getline(maps, line))
+            iss >> addressRange >> perms >> offset >> dev >> inode;
+            std::getline(iss, pathname);
+
+            size_t start = pathname.find_first_not_of(' ');
+            if (start != std::string::npos)
+                pathname = pathname.substr(start);
+            else
+                pathname.clear();
+
+            if (!pathname.empty() && pathname == exeRealPath && perms.find('x') != std::string::npos)
             {
-                std::istringstream iss(line);
-
-                iss >> addressRange >> perms >> offset >> dev >> inode;
-                std::getline(iss, pathname);
-
-                size_t start = pathname.find_first_not_of(' ');
-                if (start != std::string::npos)
-                    pathname = pathname.substr(start);
-                else
-                    pathname.clear();
-
-                if (!pathname.empty() && pathname.find("supertux") != std::string::npos && perms.find('x') != std::string::npos)
+                size_t dash = addressRange.find('-');
+                if (dash != std::string::npos)
                 {
-                    size_t dash = addressRange.find('-');
-                    if (dash != std::string::npos)
-                    {
-                        std::string startAddrStr = addressRange.substr(0, dash);
-                        baseAddress = std::stoull(startAddrStr, nullptr, 16);
-                        break;
-                    }
+                    std::string startAddrStr = addressRange.substr(0, dash);
+                    baseAddress = std::stoull(startAddrStr, nullptr, 16);
+                    break;
                 }
             }
-
-            if (baseAddress == 0)
-                Log("Could not find base address of supertux executable");
-
-            return baseAddress;
         }
 
-        void *GetSymbolAddress(const char *symbol)
+        if (baseAddress == 0)
+            Log("Could not find base address of main executable");
+
+        return baseAddress;
+    }
+
+    void *GetSymbolAddress(const char *symbol)
+    {
+        void *handle = dlopen(nullptr, RTLD_NOW);
+        if (!handle)
         {
-            void *handle = dlopen(nullptr, RTLD_NOW);
-            if (!handle)
-            {
-                Log(std::string("dlopen failed: ") + dlerror());
-                return nullptr;
-            }
-
-            dlerror();
-            void *addr = dlsym(handle, symbol);
-            char *error = dlerror();
-            if (error != nullptr)
-            {
-                Log(std::string("dlsym error: ") + error);
-                dlclose(handle);
-                return nullptr;
-            }
-            dlclose(handle);
-            return addr;
+            Log(std::string("dlopen failed: ") + dlerror());
+            return nullptr;
         }
+
+        dlerror();
+        void *addr = dlsym(handle, symbol);
+        char *error = dlerror();
+        if (error != nullptr)
+        {
+            Log(std::string("dlsym error: ") + error);
+            dlclose(handle);
+            return nullptr;
+        }
+        dlclose(handle);
+        return addr;
     }
 
     __attribute__((constructor)) static void Initialize()
